@@ -1,0 +1,123 @@
+---
+title: "Migrating to v1"
+description: "Step-by-step guide for upgrading your KMP-NativeCoroutines integration from pre-v1 to v1.0."
+---
+
+<Warning>
+  Always use the same library version for your Kotlin and Swift code. Mismatched versions will cause runtime failures.
+</Warning>
+
+Version 1.0 introduces KSP-based code generation and several improvements to naming and Swift interop. Follow the steps below to update your project.
+
+<Steps>
+
+<Step title="Add the KSP plugin">
+
+Starting with v1.0, KMP-NativeCoroutines uses [KSP](https://github.com/google/ksp) to generate the required Kotlin code. Add the KSP plugin to your `build.gradle.kts`:
+
+```kotlin
+plugins {
+    id("com.google.devtools.ksp") version "<ksp-version>" // [!code ++]
+    id("com.rickclephas.kmp.nativecoroutines") version "<version>"
+}
+```
+
+</Step>
+
+<Step title="Annotate your coroutines declarations">
+
+Previously the plugin processed all exposed coroutines declarations automatically. In v1.0 you must explicitly annotate each declaration you want the plugin to handle:
+
+```kotlin
+@NativeCoroutines // [!code ++]
+val time: StateFlow<Long>
+
+@NativeCoroutines // [!code ++]
+suspend fun getRandomLetters(): String = ""
+```
+
+Use `@NativeCoroutines` for flows and suspend functions, and `@NativeCoroutinesState` for `StateFlow` properties that represent state.
+
+</Step>
+
+<Step title="Update your custom CoroutineScope">
+
+Custom `CoroutineScope`s annotated with `@NativeCoroutineScope` must now be either `internal` or `public`. Private scopes are no longer supported:
+
+```kotlin
+class Clock {
+    @NativeCoroutineScope
+    private val coroutineScope = CoroutineScope(job + Dispatchers.Default) // [!code --]
+    @NativeCoroutineScope
+    internal val coroutineScope = CoroutineScope(job + Dispatchers.Default) // [!code ++]
+}
+```
+
+</Step>
+
+<Step title="Account for extension properties and functions">
+
+The plugin now generates extension properties and functions rather than modifying the original class. This change reflects an ObjC interop limitation: extension functions are not supported on Objective-C protocols.
+
+If your Kotlin declarations are on an `interface`, the generated native helpers will be top-level extension functions instead of members. Refer to the [interface limitations](/advanced/interface-limitations) page for details on working around this in Swift.
+
+</Step>
+
+<Step title="Remove the Native suffix from Swift call sites">
+
+Property and function names are now reused directly for their native versions — the `Native` suffix is gone. Update all Swift call sites:
+
+```swift
+// Flows
+createPublisher(for: clock.timeNative) // [!code --]
+createPublisher(for: clock.time) // [!code ++]
+
+// Suspend functions
+createFuture(for: randomLettersGenerator.getRandomLettersNative()) // [!code --]
+createFuture(for: randomLettersGenerator.getRandomLetters()) // [!code ++]
+
+// StateFlow value and SharedFlow replayCache helpers
+let value = clock.timeNativeValue // [!code --]
+let value = clock.timeValue // [!code ++]
+
+let replayCache = clock.timeNativeReplayCache // [!code --]
+let replayCache = clock.timeReplayCache // [!code ++]
+```
+
+</Step>
+
+<Step title="Replace asyncStream with asyncSequence">
+
+The `asyncStream(for:)` function has been renamed to `asyncSequence(for:)`. The new function returns an `AsyncSequence` with backpressure support, meaning your Swift code will suspend rather than buffer elements when the Kotlin flow produces values faster than you consume them:
+
+```swift
+let lettersStream = asyncStream(for: randomLettersGenerator.getRandomLettersFlow()) // [!code --]
+let lettersStream = asyncSequence(for: randomLettersGenerator.getRandomLettersFlow()) // [!code ++]
+for try await letters in lettersStream {
+    print("Got random letters: \(letters)")
+}
+```
+
+</Step>
+
+<Step title="Handle Swift CancellationError">
+
+The Swift Concurrency functions now throw a native [`CancellationError`](https://developer.apple.com/documentation/swift/cancellationerror) when a coroutine is cancelled, instead of a `KotlinCancellationException` wrapped `NSError`.
+
+Update any catch blocks that specifically check for `KotlinCancellationException`:
+
+```swift
+do {
+    let letters = try await asyncFunction(for: randomLettersGenerator.getRandomLetters())
+    print("Got random letters: \(letters)")
+} catch let error as KotlinCancellationException { // [!code --]
+} catch is CancellationError { // [!code ++]
+    print("Task was cancelled")
+} catch {
+    print("Failed with error: \(error)")
+}
+```
+
+</Step>
+
+</Steps>

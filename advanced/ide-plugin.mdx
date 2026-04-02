@@ -1,0 +1,66 @@
+---
+title: "IDE plugin"
+description: "Install the KMP-NativeCoroutines IntelliJ and Android Studio plugin to get annotation validation, exposed coroutines warnings, and quick fixes."
+---
+
+KMP-NativeCoroutines provides an IDE plugin for IntelliJ IDEA and Android Studio that surfaces annotation issues and missing coroutine wrappers directly in the editor, so you catch problems before they reach the compiler.
+
+## Installation
+
+Install the plugin from the [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/22481):
+
+<Steps>
+  <Step title="Open plugin settings">
+    In IntelliJ IDEA or Android Studio, go to **Settings** (or **Preferences** on macOS) → **Plugins**.
+  </Step>
+  <Step title="Search for KMP-NativeCoroutines">
+    Switch to the **Marketplace** tab and search for `KMP-NativeCoroutines`.
+  </Step>
+  <Step title="Install and restart">
+    Click **Install**, then restart the IDE when prompted.
+  </Step>
+</Steps>
+
+You can also install it directly from the marketplace page at `https://plugins.jetbrains.com/plugin/22481`.
+
+## Features
+
+### Annotation usage validation
+
+The plugin validates that KMP-NativeCoroutines annotations (`@NativeCoroutines`, `@NativeCoroutinesState`, `@NativeCoroutineScope`, etc.) are applied correctly. Misuse — such as annotating an incompatible declaration type — is highlighted in the editor with a clear explanation.
+
+### Exposed coroutines warnings
+
+When a suspend function or `Flow` property is exposed to ObjC/Swift without a KMP-NativeCoroutines annotation, both the Kotlin compiler and the IDE plugin will produce a diagnostic reminding you to add the appropriate annotation. This prevents accidental exposure of coroutine declarations without proper native wrappers.
+
+### Quick fixes
+
+For every exposed coroutines diagnostic, the plugin provides a quick fix to insert the correct annotation automatically. Place the cursor on the highlighted declaration and use the IDE's intention action shortcut (Alt+Enter on Linux/Windows, Option+Return on macOS) to apply the fix.
+
+## Configuring exposed coroutines severity
+
+By default, exposed coroutines produce a **warning**. You can change the severity in your `build.gradle.kts` file using the `exposedSeverity` option:
+
+```kotlin
+nativeCoroutines {
+    exposedSeverity = ExposedSeverity.WARNING // default
+}
+```
+
+To treat exposed coroutines as errors — useful in CI to enforce annotation coverage:
+
+```kotlin
+nativeCoroutines {
+    exposedSeverity = ExposedSeverity.ERROR
+}
+```
+
+To disable the checks entirely:
+
+```kotlin
+nativeCoroutines {
+    exposedSeverity = ExposedSeverity.NONE
+}
+```
+
+The available values are `WARNING`, `ERROR`, and `NONE`. The compiler and the IDE plugin both respect this setting.

@@ -1,0 +1,110 @@
+---
+title: "Combine"
+description: "Use Kotlin Flows and suspend functions as Combine publishers."
+---
+
+Add `import KMPNativeCoroutinesCombine` to your Swift file to access the Combine wrappers. This package requires Swift 5.0+ and supports iOS 13.0+, macOS 10.15+, tvOS 13.0+, and watchOS 6.0+.
+
+```swift
+import KMPNativeCoroutinesCombine
+```
+
+<Note>
+All publishers created by this package are **deferred**. Each new subscription triggers a fresh collection of the `Flow` or a fresh execution of the suspend function. Multiple subscribers each get their own independent upstream.
+</Note>
+
+<Note>
+You **must** keep a strong reference to the returned `Cancellable`. If the `Cancellable` is deallocated, the subscription is immediately cancelled.
+</Note>
+
+## Flows
+
+### createPublisher(for:)
+
+Use `createPublisher(for:)` to create an `AnyPublisher` from a `NativeFlow`. Each subscription starts a new collection of the flow.
+
+```swift
+// Create an AnyPublisher for your flow
+let publisher = createPublisher(for: clock.time)
+
+// Use this publisher as you would any other
+let cancellable = publisher.sink { completion in
+    print("Received completion: \(completion)")
+} receiveValue: { value in
+    print("Received value: \(value)")
+}
+
+// Cancel the flow collection by cancelling the publisher
+cancellable.cancel()
+```
+
+You can also pass `createPublisher(for:)` a suspend function that returns a `Flow`. The library first awaits the suspend function, then collects the returned flow.
+
+```swift
+let publisher = createPublisher(for: randomLettersGenerator.getRandomLettersFlow())
+```
+
+## Suspend functions
+
+### createFuture(for:)
+
+Use `createFuture(for:)` to create an `AnyPublisher` from a `NativeSuspend`. The publisher either emits a single value and finishes, or fails with an error.
+
+```swift
+// Create a Future/AnyPublisher for the suspend function
+let future = createFuture(for: randomLettersGenerator.getRandomLetters())
+
+// Use this future as you would any other
+let cancellable = future.sink { completion in
+    print("Received completion: \(completion)")
+} receiveValue: { value in
+    print("Received value: \(value)")
+}
+
+// Cancel the suspend function by cancelling the future
+cancellable.cancel()
+```
+
+## Cancellation
+
+Call `.cancel()` on the `Cancellable` returned by `.sink` (or any other subscription method) to cancel the underlying Kotlin coroutine or flow collection.
+
+```swift
+var cancellable: AnyCancellable?
+
+func startObserving() {
+    cancellable = createPublisher(for: clock.time)
+        .sink { completion in
+            print("Received completion: \(completion)")
+        } receiveValue: { value in
+            print("Received value: \(value)")
+        }
+}
+
+func stopObserving() {
+    cancellable?.cancel()
+    cancellable = nil
+}
+```
+
+<Note>
+Storing the `Cancellable` in a property (as shown above) is the recommended pattern. If you discard the `Cancellable` immediately — for example by assigning it to `_` — the subscription is cancelled before any values are received.
+</Note>
+
+## Storing in a set
+
+You can store multiple cancellables in an `AnyCancellable` set, which is a common pattern in Combine-heavy code:
+
+```swift
+var cancellables = Set<AnyCancellable>()
+
+func startObserving() {
+    createPublisher(for: clock.time)
+        .sink { completion in
+            print("Received completion: \(completion)")
+        } receiveValue: { value in
+            print("Received value: \(value)")
+        }
+        .store(in: &cancellables)
+}
+```

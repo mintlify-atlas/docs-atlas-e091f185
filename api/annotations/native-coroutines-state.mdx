@@ -1,0 +1,69 @@
+---
+title: '@NativeCoroutinesState'
+description: 'Marks StateFlow properties so the generated value property is the primary native property, not the flow.'
+---
+
+## Overview
+
+`@NativeCoroutinesState` tells the KMP-NativeCoroutines compiler plugin to generate native wrappers optimised for `StateFlow` state tracking. Unlike [`@NativeCoroutines`](/api/annotations/native-coroutines), the value property (not the flow property) is generated with the ObjC name of the original declaration, making it the primary property visible in Swift.
+
+```kotlin
+import com.rickclephas.kmp.nativecoroutines.NativeCoroutinesState
+```
+
+## Declaration
+
+```kotlin
+@Target(AnnotationTarget.PROPERTY)
+@Retention(AnnotationRetention.BINARY)
+@MustBeDocumented
+@OptIn(ExperimentalObjCRefinement::class)
+@HidesFromObjC
+public annotation class NativeCoroutinesState
+```
+
+## Targets
+
+<ParamField path="AnnotationTarget.PROPERTY" type="target">
+  A `StateFlow` property. Other `Flow` types are not supported.
+</ParamField>
+
+## Generated code
+
+The plugin generates two properties: a value property using the configured `stateSuffix` (default: `"Value"`) and a flow property using the configured `stateFlowSuffix` (default: `"Flow"`). The value property receives the `@ObjCName` matching the original declaration name.
+
+```kotlin
+import com.rickclephas.kmp.nativecoroutines.NativeCoroutinesState
+
+class Clock {
+    @NativeCoroutinesState
+    val time: StateFlow<Long>
+}
+```
+
+```kotlin
+import com.rickclephas.kmp.nativecoroutines.asNativeFlow
+import kotlin.native.ObjCName
+
+@ObjCName(name = "time")
+val Clock.timeValue
+    get() = time.value
+
+val Clock.timeFlow
+    get() = time.asNativeFlow()
+```
+
+## Difference from `@NativeCoroutines`
+
+| | `@NativeCoroutines` | `@NativeCoroutinesState` |
+|---|---|---|
+| Primary ObjC name | Flow property (`timeNative`) | Value property (`timeValue`) |
+| Flow property generated | Yes | Yes (`stateFlowSuffix`) |
+| Value property generated | Yes (`flowValueSuffix`) | Yes (`stateSuffix`) |
+| Applicable to | Any `Flow` | `StateFlow` only |
+
+Use `@NativeCoroutinesState` when your `StateFlow` represents UI state and you want Swift consumers to read `.time` as a plain value rather than a flow.
+
+## Swift refinement
+
+To additionally mark the generated properties with `@ShouldRefineInSwift`, use [`@NativeCoroutinesRefinedState`](/api/annotations/native-coroutines-refined#nativecoroutinesrefinedstate) instead.

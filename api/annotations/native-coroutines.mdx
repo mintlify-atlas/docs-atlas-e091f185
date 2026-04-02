@@ -1,0 +1,145 @@
+---
+title: '@NativeCoroutines'
+description: 'Marks Flow properties and suspend functions for native coroutine code generation.'
+---
+
+## Overview
+
+`@NativeCoroutines` tells the KMP-NativeCoroutines compiler plugin to generate a native wrapper for the annotated property or suspend function. Apply it to any `Flow`-returning property, `Flow`-returning function, or `suspend` function you want to expose to Swift.
+
+```kotlin
+import com.rickclephas.kmp.nativecoroutines.NativeCoroutines
+```
+
+## Declaration
+
+```kotlin
+@Target(AnnotationTarget.PROPERTY, AnnotationTarget.FUNCTION)
+@Retention(AnnotationRetention.BINARY)
+@MustBeDocumented
+@OptIn(ExperimentalObjCRefinement::class)
+@HidesFromObjC
+public annotation class NativeCoroutines
+```
+
+## Targets
+
+<ParamField path="AnnotationTarget.PROPERTY" type="target">
+  Any `Flow`-returning property (including `StateFlow` and `SharedFlow`).
+</ParamField>
+
+<ParamField path="AnnotationTarget.FUNCTION" type="target">
+  Any `suspend` function, or a function that returns a `Flow`.
+</ParamField>
+
+## Generated code
+
+### Flow properties
+
+The plugin generates a `NativeFlow` property using the configured `suffix` (default: `"Native"`).
+
+```kotlin
+import com.rickclephas.kmp.nativecoroutines.NativeCoroutines
+
+class Clock {
+    @NativeCoroutines
+    val time: StateFlow<Long>
+}
+```
+
+```kotlin
+import com.rickclephas.kmp.nativecoroutines.asNativeFlow
+import kotlin.native.ObjCName
+
+@ObjCName(name = "time")
+val Clock.timeNative
+    get() = time.asNativeFlow()
+```
+
+For a `StateFlow`, the plugin also generates a value property using the configured `flowValueSuffix` (default: `"Value"`):
+
+```kotlin
+val Clock.timeValue
+    get() = time.value
+```
+
+For a `SharedFlow`, the plugin generates a replay cache property using the configured `flowReplayCacheSuffix` (default: `"ReplayCache"`):
+
+```kotlin
+val Clock.timeReplayCache
+    get() = time.replayCache
+```
+
+### Suspend functions
+
+The plugin generates a `NativeSuspend` wrapper function using the configured `suffix`.
+
+```kotlin
+import com.rickclephas.kmp.nativecoroutines.NativeCoroutines
+
+class RandomLettersGenerator {
+    @NativeCoroutines
+    suspend fun getRandomLetters(): String {
+        // Code to generate some random letters
+    }
+}
+```
+
+```kotlin
+import com.rickclephas.kmp.nativecoroutines.nativeSuspend
+import kotlin.native.ObjCName
+
+@ObjCName(name = "getRandomLetters")
+fun RandomLettersGenerator.getRandomLettersNative() =
+    nativeSuspend { getRandomLetters() }
+```
+
+## Swift refinement
+
+To additionally mark the generated wrapper with `@ShouldRefineInSwift` — hiding it from Swift autocompletion so you can expose a cleaner Swift API — use [`@NativeCoroutinesRefined`](/api/annotations/native-coroutines-refined) instead.
+
+---
+
+## `@NativeCoroutineScope`
+
+```kotlin
+import com.rickclephas.kmp.nativecoroutines.NativeCoroutineScope
+```
+
+### Declaration
+
+```kotlin
+@Target(AnnotationTarget.PROPERTY)
+@Retention(AnnotationRetention.SOURCE)
+@MustBeDocumented
+public annotation class NativeCoroutineScope
+```
+
+### Overview
+
+`@NativeCoroutineScope` identifies the `CoroutineScope` property the plugin should use when generating native wrappers for a class. Without this annotation the plugin uses a default scope:
+
+```kotlin
+internal val defaultCoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+```
+
+### Targets
+
+<ParamField path="AnnotationTarget.PROPERTY" type="target">
+  A property of type `CoroutineScope`. Must be `internal` or `public`.
+</ParamField>
+
+### Usage
+
+```kotlin
+import com.rickclephas.kmp.nativecoroutines.NativeCoroutineScope
+
+class Clock {
+    @NativeCoroutineScope
+    internal val coroutineScope = CoroutineScope(job + Dispatchers.Default)
+}
+```
+
+<Note>
+  The annotated property must be `internal` or `public`. Private and protected scopes are not supported.
+</Note>

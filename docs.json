@@ -1,122 +1,103 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "KMP-NativeCoroutines",
+  "theme": "luma",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#f32057",
+    "light": "#040404",
+    "dark": "#ffffff"
   },
-  "favicon": "/favicon.svg",
+  "logo": {
+    "light": "https://media.brand.dev/a817b703-5c53-4dae-bee0-e118ff0a504a.svg",
+    "dark": "https://media.brand.dev/a817b703-5c53-4dae-bee0-e118ff0a504a.svg"
+  },
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/rickclephas/KMP-NativeCoroutines"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/rickclephas/KMP-NativeCoroutines"
+    }
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Documentation",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Get Started",
             "pages": [
-              "index",
-              "quickstart",
-              "development"
+              "introduction",
+              "installation",
+              "quickstart"
             ]
           },
           {
-            "group": "Customization",
+            "group": "Kotlin Setup",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
+              "kotlin/annotations",
+              "kotlin/flows",
+              "kotlin/suspend-functions",
+              "kotlin/customization"
             ]
           },
           {
-            "group": "Writing content",
+            "group": "Swift Usage",
             "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
+              "swift/swift-concurrency",
+              "swift/combine",
+              "swift/rxswift"
             ]
           },
           {
-            "group": "AI tools",
+            "group": "Advanced",
             "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "advanced/coroutine-scope",
+              "advanced/interface-limitations",
+              "advanced/swift-export",
+              "advanced/ide-plugin"
+            ]
+          },
+          {
+            "group": "Migration",
+            "pages": [
+              "migration/migrating-to-v1",
+              "migration/compatibility"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "API Reference",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Kotlin Annotations",
             "pages": [
-              "api-reference/introduction"
+              "api/annotations/native-coroutines",
+              "api/annotations/native-coroutines-state",
+              "api/annotations/native-coroutines-ignore",
+              "api/annotations/native-coroutines-refined"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Swift APIs",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "api/swift/async",
+              "api/swift/combine",
+              "api/swift/rxswift"
+            ]
+          },
+          {
+            "group": "Gradle Plugin",
+            "pages": [
+              "api/gradle/plugin-configuration"
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+    ]
   }
 }

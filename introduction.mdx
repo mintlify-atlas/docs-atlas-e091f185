@@ -1,0 +1,65 @@
+---
+title: "Introduction"
+description: "KMP-NativeCoroutines bridges Kotlin Coroutines and Swift, adding cancellation support and typed Flow interfaces that the standard Kotlin/Swift interop layer cannot provide."
+---
+
+## What is KMP-NativeCoroutines?
+
+KMP-NativeCoroutines is a library that lets you use Kotlin Coroutines from Swift in Kotlin Multiplatform apps. It ships as a Gradle plugin for your Kotlin code and a set of Swift packages for your iOS/macOS/tvOS/watchOS targets.
+
+The library solves two specific limitations of the standard Kotlin/Swift interop layer.
+
+## The problems it solves
+
+**No cancellation support.** Kotlin suspend functions are exposed to Swift as functions with a completion handler. Swift 5.5 added async/await syntax, and while Kotlin suspend functions look like async functions in Swift, this is only syntactic sugar over the completion handler. Cancelling the Swift `Task` does not cancel the underlying Kotlin coroutine.
+
+**No generic Flow types.** ObjC does not support generics on protocols. All `Flow` interfaces lose their generic value type when exposed to Swift, making them awkward to consume directly.
+
+KMP-NativeCoroutines solves both problems by generating native wrapper types that carry full type information and integrate with Swift cancellation.
+
+<Info>
+  The library uses a Kotlin compiler plugin to generate native wrapper code automatically. You annotate your declarations with `@NativeCoroutines` and the plugin does the rest.
+</Info>
+
+## Swift integration options
+
+Choose the Swift implementation that matches your app's reactive framework. You can install multiple implementations side by side.
+
+<CardGroup cols={3}>
+  <Card title="Async / Await" icon="swift" href="/swift/swift-concurrency">
+    Uses Swift Concurrency (`async`/`await` and `AsyncSequence`). Requires Swift 5.5+. The recommended choice for new projects.
+  </Card>
+  <Card title="Combine" icon="arrow-right-arrow-left" href="/swift/combine">
+    Produces `AnyPublisher` for Flows and `Future` for suspend functions. Requires Swift 5.0+ and iOS 13+.
+  </Card>
+  <Card title="RxSwift" icon="rotate" href="/swift/rxswift">
+    Produces `Observable` for Flows and `Single` for suspend functions. Supports the widest range of deployment targets.
+  </Card>
+</CardGroup>
+
+## Platform and version requirements
+
+The Kotlin plugin targets Kotlin 2.3.20 and Coroutines 1.10.1. Compatibility builds for older Kotlin versions are available — see the [compatibility table](/migration/compatibility).
+
+Platform minimums depend on which Swift implementation you install:
+
+| Implementation | Swift | iOS   | macOS | tvOS  | watchOS |
+| -------------- | :---: | :---: | :---: | :---: | :-----: |
+| Async          |  5.5  | 13.0  | 10.15 | 13.0  |   6.0   |
+| Combine        |  5.0  | 13.0  | 10.15 | 13.0  |   6.0   |
+| RxSwift        |  5.0  |  9.0  | 10.9  |  9.0  |   3.0   |
+
+<Note>
+  RxSwift is the only implementation that supports iOS below 13, making it the right choice if you need to target iOS 9–12.
+</Note>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="wrench" href="/installation">
+    Add the Gradle plugin and Swift packages to your project.
+  </Card>
+  <Card title="Quickstart" icon="bolt" href="/quickstart">
+    Annotate your first Kotlin declarations and call them from Swift in minutes.
+  </Card>
+</CardGroup>

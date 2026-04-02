@@ -1,0 +1,140 @@
+---
+title: "Swift concurrency"
+description: "Use Kotlin Flows and suspend functions with Swift's async/await and AsyncSequence."
+---
+
+Add `import KMPNativeCoroutinesAsync` to your Swift file to access all Swift concurrency wrappers. This package requires Swift 5.5+ and supports iOS 13.0+, macOS 10.15+, tvOS 13.0+, and watchOS 6.0+.
+
+```swift
+import KMPNativeCoroutinesAsync
+```
+
+## Suspend functions
+
+### asyncFunction(for:)
+
+`asyncFunction(for:)` wraps a `NativeSuspend` in a Swift `async throws` function. Awaiting it runs the Kotlin suspend function and either returns its result or throws the error it produced.
+
+```swift
+let handle = Task {
+    do {
+        let letters = try await asyncFunction(for: randomLettersGenerator.getRandomLetters())
+        print("Got random letters: \(letters)")
+    } catch {
+        print("Failed with error: \(error)")
+    }
+}
+```
+
+### asyncResult(for:)
+
+If you prefer to avoid `do`/`catch`, use `asyncResult(for:)`. It returns a `Result<Value, Error>` and never throws.
+
+```swift
+let result = await asyncResult(for: randomLettersGenerator.getRandomLetters())
+if case let .success(letters) = result {
+    print("Got random letters: \(letters)")
+}
+```
+
+### asyncError(for:)
+
+For suspend functions that return `Unit` (i.e., `Void`-equivalent), use `asyncError(for:)`. It returns `nil` on success or an `Error` if the function failed.
+
+```swift
+if let error = await asyncError(for: integrationTests.returnUnit()) {
+    print("Failed with error: \(error)")
+}
+```
+
+## Flows
+
+### asyncSequence(for:)
+
+`asyncSequence(for:)` wraps a `NativeFlow` in a `NativeFlowAsyncSequence`, which conforms to Swift's `AsyncSequence` protocol. Iterate over it with `for try await` inside a `Task`.
+
+```swift
+let handle = Task {
+    do {
+        let sequence = asyncSequence(for: clock.time)
+        for try await time in sequence {
+            print("Current time: \(time)")
+        }
+    } catch {
+        print("Failed with error: \(error)")
+    }
+}
+```
+
+The returned type is `NativeFlowAsyncSequence`, which supports backpressure: the next value is only requested from Kotlin after the current one has been consumed by the iterator.
+
+## Cancellation
+
+Cancel the wrapping `Task` to cancel the underlying Kotlin coroutine. This works for both suspend functions and flow collection.
+
+```swift
+// Start a long-running flow collection
+let handle = Task {
+    let sequence = asyncSequence(for: randomLettersGenerator.getRandomLettersFlow())
+    for try await letters in sequence {
+        print("Got random letters: \(letters)")
+    }
+}
+
+// Cancel the Kotlin coroutine by cancelling the Task
+handle.cancel()
+```
+
+<Note>
+When a `Task` is cancelled, `asyncFunction(for:)` and `asyncSequence(for:)` throw Swift's `CancellationError` — not a `KotlinCancellationException`. Handle cancellation as you would any other Swift async cancellation.
+</Note>
+
+```swift
+let handle = Task {
+    do {
+        let letters = try await asyncFunction(for: randomLettersGenerator.getRandomLetters())
+        print("Got random letters: \(letters)")
+    } catch is CancellationError {
+        print("Task was cancelled")
+    } catch {
+        print("Failed with error: \(error)")
+    }
+}
+
+handle.cancel()
+```
+
+## Error handling patterns
+
+<CodeGroup>
+
+```swift do-catch (asyncFunction)
+let handle = Task {
+    do {
+        let letters = try await asyncFunction(for: randomLettersGenerator.getRandomLetters())
+        print("Got random letters: \(letters)")
+    } catch {
+        print("Failed with error: \(error)")
+    }
+}
+```
+
+```swift Result type (asyncResult)
+let result = await asyncResult(for: randomLettersGenerator.getRandomLetters())
+switch result {
+case .success(let letters):
+    print("Got random letters: \(letters)")
+case .failure(let error):
+    print("Failed with error: \(error)")
+}
+```
+
+```swift Optional error (asyncError)
+if let error = await asyncError(for: integrationTests.returnUnit()) {
+    print("Failed with error: \(error)")
+} else {
+    print("Completed successfully")
+}
+```
+
+</CodeGroup>

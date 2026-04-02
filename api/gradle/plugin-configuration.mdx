@@ -1,0 +1,151 @@
+---
+title: "Gradle plugin configuration"
+description: "Complete API reference for the KMP-NativeCoroutines Gradle plugin DSL. Configure code generation, naming suffixes, severity checks, and Swift export compatibility."
+---
+
+The KMP-NativeCoroutines Gradle plugin drives all Kotlin-side code generation. Apply it in your `build.gradle.kts` and configure it through the `nativeCoroutines` extension block.
+
+**Plugin ID:** `com.rickclephas.kmp.nativecoroutines`
+
+```kotlin
+plugins {
+    id("com.rickclephas.kmp.nativecoroutines") version "1.0.2"
+}
+```
+
+All configuration options are set inside the `nativeCoroutines` block:
+
+```kotlin
+nativeCoroutines {
+    // configuration options
+}
+```
+
+---
+
+## Properties
+
+### suffix
+
+<ParamField path="suffix" type="String" default="Native">
+  The suffix appended to generated native coroutine function and property names.
+
+  For example, a Kotlin property named `time` annotated with `@NativeCoroutines` produces a generated property named `timeNative`.
+</ParamField>
+
+### fileSuffix
+
+<ParamField path="fileSuffix" type="String?" default="null">
+  The suffix appended to generated file names. When `null`, the value of `suffix` is used instead.
+</ParamField>
+
+### flowValueSuffix
+
+<ParamField path="flowValueSuffix" type="String?" default="Value">
+  The suffix used to name the generated value property for `StateFlow` declarations annotated with `@NativeCoroutines`. Set to `null` to suppress generation of these value properties.
+
+  For example, a `StateFlow<Long>` named `time` produces a property named `timeValue` that returns the current value synchronously.
+</ParamField>
+
+### flowReplayCacheSuffix
+
+<ParamField path="flowReplayCacheSuffix" type="String?" default="ReplayCache">
+  The suffix used to name the generated `replayCache` property for `SharedFlow` declarations annotated with `@NativeCoroutines`. Set to `null` to suppress generation of these replay cache properties.
+
+  For example, a `SharedFlow<String>` named `messages` produces a property named `messagesReplayCache`.
+</ParamField>
+
+### stateSuffix
+
+<ParamField path="stateSuffix" type="String" default="Value">
+  The suffix used to name the generated value property for `StateFlow` declarations annotated with `@NativeCoroutinesState`.
+
+  For example, a `StateFlow<Long>` named `time` annotated with `@NativeCoroutinesState` produces a property named `timeValue` that returns the current value synchronously.
+</ParamField>
+
+### stateFlowSuffix
+
+<ParamField path="stateFlowSuffix" type="String?" default="Flow">
+  The suffix used to name the generated flow property for declarations annotated with `@NativeCoroutinesState`. Set to `null` to suppress generation of flow properties for state declarations.
+
+  For example, a `StateFlow<Long>` named `time` annotated with `@NativeCoroutinesState` produces a flow property named `timeFlow`.
+</ParamField>
+
+### exposedSeverity
+
+<ParamField path="exposedSeverity" type="ExposedSeverity" default="WARNING">
+  The severity level reported when Kotlin suspend functions or `Flow` declarations are exposed to ObjC/Swift without a KMP-NativeCoroutines annotation.
+
+  Accepted values: `ExposedSeverity.NONE`, `ExposedSeverity.WARNING`, `ExposedSeverity.ERROR`.
+
+  See [ExposedSeverity](#exposedseverity-enum) below for details.
+</ParamField>
+
+### generatedSourceDirs
+
+<ParamField path="generatedSourceDirs" type="MutableList<Any>" default='["build/generated"]'>
+  A list of directories that contain generated source files. The plugin adds these directories to the Kotlin compiler's source path so that generated native coroutine declarations are picked up during compilation.
+
+  Each entry can be a `String` path relative to the project root, a `File`, or any other type accepted by [`Project.file()`](https://docs.gradle.org/current/javadoc/org/gradle/api/Project.html#file-java.lang.Object-).
+</ParamField>
+
+### swiftExport
+
+<ParamField path="swiftExport" type="Boolean" default="false">
+  Enables Swift export compatibility mode. When `true`, the plugin adjusts generated code to be compatible with the Kotlin Swift export feature instead of the traditional ObjC interop.
+
+  Read [Swift export](/advanced/swift-export) before enabling this option.
+</ParamField>
+
+---
+
+## ExposedSeverity enum
+
+Controls the compiler diagnostic severity when coroutine declarations are exposed to ObjC/Swift without a KMP-NativeCoroutines annotation.
+
+| Value | Description |
+|---|---|
+| `NONE` | Disable the check entirely. No diagnostic is produced. |
+| `WARNING` | Emit a compiler warning (default). Encourages annotation without blocking the build. |
+| `ERROR` | Fail the build with a compiler error. Enforces that all exposed coroutines are annotated. |
+
+```kotlin
+nativeCoroutines {
+    exposedSeverity = ExposedSeverity.ERROR
+}
+```
+
+---
+
+## Complete example
+
+```kotlin
+nativeCoroutines {
+    // Suffix for generated function and property names (default: "Native")
+    suffix = "Native"
+
+    // Suffix for generated file names; null uses the suffix value (default: null)
+    fileSuffix = null
+
+    // Suffix for StateFlow value properties from @NativeCoroutines; null disables them (default: "Value")
+    flowValueSuffix = "Value"
+
+    // Suffix for SharedFlow replayCache properties; null disables them (default: "ReplayCache")
+    flowReplayCacheSuffix = "ReplayCache"
+
+    // Suffix for the value property from @NativeCoroutinesState (default: "Value")
+    stateSuffix = "Value"
+
+    // Suffix for the flow property from @NativeCoroutinesState; null disables them (default: "Flow")
+    stateFlowSuffix = "Flow"
+
+    // Severity for exposed coroutines check (default: ExposedSeverity.WARNING)
+    exposedSeverity = ExposedSeverity.WARNING
+
+    // Directories containing generated sources (default: ["build/generated"])
+    generatedSourceDirs.add("build/generated/ksp/main/kotlin")
+
+    // Swift export compatibility mode (default: false)
+    swiftExport = false
+}
+```

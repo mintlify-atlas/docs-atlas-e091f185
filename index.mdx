@@ -1,97 +1,68 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "KMP-NativeCoroutines"
+description: "Use Kotlin Coroutines from Swift code in Kotlin Multiplatform apps — with full cancellation support and type-safe Flows."
 ---
 
-## Setting up
+KMP-NativeCoroutines bridges the gap between Kotlin Coroutines and Swift by generating native wrappers for your suspend functions and Flows. It adds what Kotlin's built-in ObjC interop lacks: proper cancellation and generic Flow types that work seamlessly across Swift Concurrency, Combine, and RxSwift.
 
-Get your documentation site up and running in minutes.
-
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Add KMP-NativeCoroutines to your Kotlin and Swift projects in minutes.
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Annotate your first coroutine and call it from Swift.
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="Kotlin Annotations" icon="at" href="/kotlin/annotations">
+    Learn which annotations to use for Flows, suspend functions, and state.
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="Swift Usage" icon="swift" href="/swift/swift-concurrency">
+    Use async/await, Combine, or RxSwift to collect Kotlin Flows and await results.
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## Why KMP-NativeCoroutines?
 
-Everything you need to create world-class documentation.
+Kotlin Coroutines expose suspend functions to Swift as completion-handler callbacks — which don't support cancellation. Flows lose their generic type entirely in ObjC. KMP-NativeCoroutines solves both problems with a lightweight code generation approach.
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
+<CardGroup cols={3}>
+  <Card title="Cancellation" icon="circle-stop">
+    Cancel Kotlin coroutines directly from Swift using Task cancellation, Combine's cancel(), or RxSwift's dispose().
   </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
+  <Card title="Typed Flows" icon="filter">
+    Preserve generic Flow value types across the Kotlin/Swift boundary — no more `Any` casts.
   </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
+  <Card title="Multiple Swift Targets" icon="shuffle">
+    Choose Swift Concurrency, Combine, or RxSwift — or use all three in the same project.
   </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+</CardGroup>
 
-## Need inspiration?
+## How it works
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+<Steps>
+  <Step title="Add the Gradle plugin">
+    Apply `com.rickclephas.kmp.nativecoroutines` to your KMP module and KSP generates native wrapper code automatically.
+  </Step>
+  <Step title="Annotate your Kotlin declarations">
+    Mark suspend functions and Flow properties with `@NativeCoroutines` or `@NativeCoroutinesState`. The plugin handles the rest.
+  </Step>
+  <Step title="Call from Swift">
+    Use `asyncFunction(for:)`, `createPublisher(for:)`, or `createObservable(for:)` to wrap the generated natives into idiomatic Swift types.
+  </Step>
+</Steps>
+
+## Swift implementation options
+
+| Implementation | Swift | iOS | macOS | tvOS | watchOS |
+|---|---|---|---|---|---|
+| **Async (Swift Concurrency)** | 5.5 | 13.0 | 10.15 | 13.0 | 6.0 |
+| **Combine** | 5.0 | 13.0 | 10.15 | 13.0 | 6.0 |
+| **RxSwift** | 5.0 | 9.0 | 10.9 | 9.0 | 3.0 |
+
+<CardGroup cols={2}>
+  <Card title="API Reference" icon="book" href="/api/annotations/native-coroutines">
+    Explore all annotations, Swift functions, and Gradle plugin options.
+  </Card>
+  <Card title="Migration Guide" icon="arrow-up-right-dots" href="/migration/migrating-to-v1">
+    Upgrading from an earlier version? Follow the step-by-step migration guide.
+  </Card>
+</CardGroup>

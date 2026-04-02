@@ -1,0 +1,116 @@
+---
+title: "Installation"
+description: "Add the KMP-NativeCoroutines Gradle plugin and the Swift packages to your Kotlin Multiplatform project."
+---
+
+The library has two parts: a **Kotlin Gradle plugin** that generates native wrapper code, and one or more **Swift packages** that provide the Swift-side API. You must install both parts, and their versions must match.
+
+<Warning>
+  Always use the same version number for the Gradle plugin and the Swift package. Mixing versions will cause runtime errors that are difficult to diagnose.
+</Warning>
+
+## Kotlin setup
+
+<Steps>
+  <Step title="Add the plugin to your build file">
+    In your shared module's `build.gradle.kts`, add the KMP-NativeCoroutines plugin to the `plugins` block:
+
+    ```kotlin build.gradle.kts
+    plugins {
+        id("com.rickclephas.kmp.nativecoroutines") version "1.0.2"
+    }
+    ```
+  </Step>
+  <Step title="Opt in to the experimental ObjCName annotation">
+    The generated code uses Kotlin's `@ObjCName` annotation to control the Objective-C name of the generated declarations. Add the opt-in to all source sets:
+
+    ```kotlin build.gradle.kts
+    kotlin.sourceSets.all {
+        languageSettings.optIn("kotlin.experimental.ExperimentalObjCName")
+    }
+    ```
+  </Step>
+</Steps>
+
+## Swift setup
+
+Install one or more Swift implementations depending on which reactive framework your app uses. You can install all three if needed.
+
+<Tabs>
+  <Tab title="Swift Package Manager">
+    **Add via `Package.swift`**
+
+    Add the package dependency and choose the products you need:
+
+    ```swift Package.swift
+    dependencies: [
+        .package(url: "https://github.com/rickclephas/KMP-NativeCoroutines.git", exact: "1.0.2")
+    ],
+    targets: [
+        .target(
+            name: "MyTargetName",
+            dependencies: [
+                // Swift Concurrency implementation
+                .product(name: "KMPNativeCoroutinesAsync", package: "KMP-NativeCoroutines"),
+                // Combine implementation
+                .product(name: "KMPNativeCoroutinesCombine", package: "KMP-NativeCoroutines"),
+                // RxSwift implementation
+                .product(name: "KMPNativeCoroutinesRxSwift", package: "KMP-NativeCoroutines")
+            ]
+        )
+    ]
+    ```
+
+    Only include the products your app actually uses.
+
+    **Add via Xcode**
+
+    Go to **File** > **Add Packages...** and enter the URL:
+
+    ```
+    https://github.com/rickclephas/KMP-NativeCoroutines.git
+    ```
+
+    Set the dependency rule to **Exact Version** and enter `1.0.2`.
+
+    <Note>
+      If you only need a single implementation, SPM-specific versions with suffixes `-spm-async`, `-spm-combine`, and `-spm-rxswift` are also available.
+    </Note>
+  </Tab>
+  <Tab title="CocoaPods">
+    Add the pods you need to your `Podfile`. Each pod corresponds to one Swift implementation:
+
+    ```ruby Podfile
+    # Swift Concurrency implementation
+    pod 'KMPNativeCoroutinesAsync', git: 'https://github.com/rickclephas/KMP-NativeCoroutines.git', tag: 'v1.0.2'
+
+    # Combine implementation
+    pod 'KMPNativeCoroutinesCombine', git: 'https://github.com/rickclephas/KMP-NativeCoroutines.git', tag: 'v1.0.2'
+
+    # RxSwift implementation
+    pod 'KMPNativeCoroutinesRxSwift', git: 'https://github.com/rickclephas/KMP-NativeCoroutines.git', tag: 'v1.0.2'
+    ```
+
+    Only add the pods your app actually uses, then run `pod install`.
+
+    <Note>
+      The CocoaPods version tag must not include a Kotlin version suffix (for example, do not use `-new-mm` or `-kotlin-1.6.0`). Use the plain version tag `v1.0.2`.
+    </Note>
+  </Tab>
+</Tabs>
+
+## IDE plugin (optional)
+
+Install the [KMP-NativeCoroutines IDE plugin](https://plugins.jetbrains.com/plugin/22481) from the JetBrains Marketplace for IntelliJ IDEA or Android Studio. The plugin provides:
+
+- Annotation usage validation
+- Warnings when coroutine declarations are exposed to ObjC/Swift without an annotation
+- Quick fixes to add the correct annotation
+
+You can install it from **Settings** > **Plugins** > **Marketplace** by searching for `KMP-NativeCoroutines`.
+
+## Next step
+
+<Card title="Quickstart" icon="bolt" href="/quickstart">
+  Annotate your first Kotlin declarations and call them from Swift.
+</Card>

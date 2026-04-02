@@ -1,0 +1,206 @@
+---
+title: "Annotations"
+description: "Reference for all KMP-NativeCoroutines annotations and what code each one generates."
+---
+
+The KMP-NativeCoroutines compiler plugin reads annotations on your Kotlin declarations to decide what native wrapper code to generate. Apply the right annotation to each declaration and the plugin handles the rest.
+
+## `@NativeCoroutines`
+
+Marks a `Flow` property, a function returning a `Flow`, or a `suspend` function for native code generation. This is the primary annotation you will use.
+
+```kotlin
+import com.rickclephas.kmp.nativecoroutines.NativeCoroutines
+
+class Clock {
+    @NativeCoroutines
+    val time: StateFlow<Long>
+}
+
+class RandomLettersGenerator {
+    @NativeCoroutines
+    suspend fun getRandomLetters(): String {
+        // ...
+    }
+}
+```
+
+**Targets:** `PROPERTY`, `FUNCTION`
+
+The annotation itself is hidden from ObjC — it carries `@HidesFromObjC` so the original declaration is not visible to Swift. The plugin generates a separate native wrapper that is visible instead.
+
+<AccordionGroup>
+  <Accordion title="Generated code — Flow property">
+    For a `StateFlow` property the plugin generates a native flow property and, because it is a `StateFlow`, a `.value` shortcut:
+
+    ```kotlin
+    import com.rickclephas.kmp.nativecoroutines.asNativeFlow
+    import kotlin.native.ObjCName
+
+    @ObjCName(name = "time")
+    val Clock.timeNative
+        get() = time.asNativeFlow()
+
+    val Clock.timeValue
+        get() = time.value
+    ```
+
+    For a `SharedFlow` the plugin generates a native flow property and a `.replayCache` shortcut instead of a value property:
+
+    ```kotlin
+    val Clock.timeReplayCache
+        get() = time.replayCache
+    ```
+  </Accordion>
+  <Accordion title="Generated code — suspend function">
+    ```kotlin
+    import com.rickclephas.kmp.nativecoroutines.nativeSuspend
+    import kotlin.native.ObjCName
+
+    @ObjCName(name = "getRandomLetters")
+    fun RandomLettersGenerator.getRandomLettersNative() =
+        nativeSuspend { getRandomLetters() }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## `@NativeCoroutinesState`
+
+Marks a `StateFlow` property for state-tracking generation. Use this annotation instead of `@NativeCoroutines` when you want to expose state (like in a view model) rather than a stream. The main difference is that the value property receives `@ObjCName` and becomes the primary identifier, while the flow property is a secondary companion.
+
+```kotlin
+import com.rickclephas.kmp.nativecoroutines.NativeCoroutinesState
+
+class Clock {
+    @NativeCoroutinesState
+    val time: StateFlow<Long>
+}
+```
+
+**Targets:** `PROPERTY` only. The property must be a `StateFlow`.
+
+<Accordion title="Generated code">
+  ```kotlin
+  import com.rickclephas.kmp.nativecoroutines.asNativeFlow
+  import kotlin.native.ObjCName
+
+  @ObjCName(name = "time")
+  val Clock.timeValue
+      get() = time.value
+
+  val Clock.timeFlow
+      get() = time.asNativeFlow()
+  ```
+
+  The value property takes the `@ObjCName` with the original declaration name, making it the primary Swift-visible member. The flow property is accessible as a companion without the `@ObjCName` override.
+</Accordion>
+
+## `@NativeCoroutinesIgnore`
+
+Tells the plugin to skip code generation for a specific property or function. This is useful when a declaration would normally trigger the [exposed coroutines check](/kotlin/customization#exposed-coroutines-checks) but you intentionally do not want a native wrapper.
+
+```kotlin
+import com.rickclephas.kmp.nativecoroutines.NativeCoroutinesIgnore
+
+@NativeCoroutinesIgnore
+val ignoredFlowProperty: Flow<Int>
+
+@NativeCoroutinesIgnore
+suspend fun ignoredSuspendFunction() { }
+```
+
+**Targets:** `PROPERTY`, `FUNCTION`
+
+<Note>
+  `@NativeCoroutinesIgnore` has `SOURCE` retention, meaning it is only present during compilation and does not appear in compiled artifacts.
+</Note>
+
+## `@NativeCoroutinesRefined`
+
+Works like `@NativeCoroutines` but adds `@ShouldRefineInSwift` to the generated wrapper. This hides the generated property or function behind a `__` prefix in Swift, giving you a hook to write a cleaner Swift extension on top.
+
+```kotlin
+import com.rickclephas.kmp.nativecoroutines.NativeCoroutinesRefined
+
+class Clock {
+    @NativeCoroutinesRefined
+    val time: StateFlow<Long>
+}
+```
+
+**Targets:** `PROPERTY`, `FUNCTION`
+
+You can then refine the declaration in Swift with a more idiomatic interface. For example, exposing the flow as an `AnyPublisher`:
+
+```swift
+import KMPNativeCoroutinesCombine
+
+extension Clock {
+    var time: AnyPublisher<KotlinLong, Error> {
+        createPublisher(for: __time)
+    }
+}
+```
+
+<Note>
+  This annotation requires a module-wide opt-in to `kotlin.experimental.ExperimentalObjCRefinement`.
+</Note>
+
+## `@NativeCoroutinesRefinedState`
+
+Works like `@NativeCoroutinesState` but adds `@ShouldRefineInSwift` to the generated wrappers. Use this when you want to expose a `StateFlow` for state tracking and still refine the generated properties in Swift.
+
+```kotlin
+import com.rickclephas.kmp.nativecoroutines.NativeCoroutinesRefinedState
+
+class Clock {
+    @NativeCoroutinesRefinedState
+    val time: StateFlow<Long>
+}
+```
+
+**Targets:** `PROPERTY` only. The property must be a `StateFlow`.
+
+<Note>
+  This annotation requires a module-wide opt-in to `kotlin.experimental.ExperimentalObjCRefinement`.
+</Note>
+
+## `@NativeCoroutineScope`
+
+Marks the `CoroutineScope` property that the generated native wrappers should use. Without this annotation the plugin uses a default scope defined as:
+
+```kotlin
+internal val defaultCoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+```
+
+To provide your own scope, annotate an `internal` or `public` property:
+
+```kotlin
+import com.rickclephas.kmp.nativecoroutines.NativeCoroutineScope
+
+class Clock {
+    @NativeCoroutineScope
+    internal val coroutineScope = CoroutineScope(job + Dispatchers.Default)
+}
+```
+
+**Targets:** `PROPERTY` only.
+
+<Note>
+  The annotated scope property must be either `internal` or `public`. Private scopes are not supported.
+</Note>
+
+<Tip>
+  KMP-NativeCoroutines has built-in support for [KMP-ObservableViewModel](https://github.com/rickclephas/KMP-ObservableViewModel). Coroutines inside a `ViewModel` will use the `ViewModelScope` by default, so you do not need `@NativeCoroutineScope` there.
+</Tip>
+
+## Annotation summary
+
+| Annotation | Targets | Use when |
+|---|---|---|
+| `@NativeCoroutines` | Property, Function | Exposing a `Flow` or `suspend` function to Swift |
+| `@NativeCoroutinesState` | Property | Exposing a `StateFlow` as observable state (e.g. in a view model) |
+| `@NativeCoroutinesIgnore` | Property, Function | Suppressing generation and silencing exposed coroutines warnings |
+| `@NativeCoroutinesRefined` | Property, Function | Generating a refinement hook for further Swift customization |
+| `@NativeCoroutinesRefinedState` | Property | Same as above, but for `StateFlow` state tracking |
+| `@NativeCoroutineScope` | Property | Providing a custom `CoroutineScope` for generated wrappers |

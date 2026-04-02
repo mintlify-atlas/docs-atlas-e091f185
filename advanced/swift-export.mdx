@@ -1,0 +1,93 @@
+---
+title: "Swift export"
+description: "Use KMP-NativeCoroutines with Kotlin's experimental Swift export feature, including known limitations and temporary workarounds."
+---
+
+<Warning>
+  Swift export is still experimental and actively being developed. It does not yet support all language features, may contain bugs, and its behaviour could change in future Kotlin versions. It is **not recommended** for production use.
+</Warning>
+
+Starting with Kotlin 2.2.20, you can opt in to [Swift export](https://kotlinlang.org/docs/native-swift-export.html), which provides direct Kotlin–Swift interoperability without going through the ObjC layer. KMP-NativeCoroutines provides a compatibility mode so you can start testing with Swift export as early as possible.
+
+Once Swift export is complete and stable, it will likely remove the need for KMP-NativeCoroutines entirely. Until then, this compatibility mode lets you migrate incrementally.
+
+## Known limitations
+
+### `NativeSuspend` and `NativeFlow` are unsupported
+
+Swift export does not yet support functional return types. Because KMP-NativeCoroutines relies heavily on functional return types for `NativeSuspend` and `NativeFlow`, those generated wrappers are incompatible with Swift export. The plugin clones your original functions and properties to prevent build failures, but the native wrappers themselves cannot be used from Swift export.
+
+**Temporary workaround:** Disable any Swift code that uses `NativeSuspend` or `NativeFlow` when building with Swift export enabled.
+
+### `@ObjCName` is ignored
+
+Swift export currently ignores the `@ObjCName` annotation. KMP-NativeCoroutines uses `@ObjCName` to expose generated declarations under the original function or property name. Without it, the generated declarations retain the `Native` suffix in their Swift-visible name.
+
+**Temporary workaround:** Update your Swift call sites to use the `Native` suffix when accessing generated declarations. For example:
+
+```swift
+// Before (standard ObjC interop)
+let letters = try await asyncFunction(for: randomLettersGenerator.getRandomLetters(throwException: throwException))
+
+// After (Swift export compatibility mode)
+let letters = try await asyncFunction(for: randomLettersGenerator.getRandomLettersNative(throwException: throwException))
+```
+
+## Enabling Swift export
+
+### Step 1: Enable Swift export in the Kotlin build
+
+Follow the [official Kotlin Swift export documentation](https://kotlinlang.org/docs/native-swift-export.html) and enable experimental coroutines support in your `build.gradle.kts`:
+
+```kotlin
+// build.gradle.kts
+import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftexport.SWIFT_EXPORT_COROUTINES_SUPPORT_TURNED_ON
+
+kotlin {
+    // ...
+    swiftExport {
+        // ...
+        configure {
+            settings.put(SWIFT_EXPORT_COROUTINES_SUPPORT_TURNED_ON, "true")
+        }
+    }
+}
+```
+
+### Step 2: Enable KMP-NativeCoroutines compatibility mode
+
+Once Swift export is enabled, activate the KMP-NativeCoroutines Swift export compatibility mode:
+
+```kotlin
+// build.gradle.kts
+nativeCoroutines {
+    swiftExport = true
+}
+```
+
+## What works in Swift export mode
+
+### Suspend functions as async functions
+
+With experimental coroutines support enabled, suspend functions are exposed as native Swift async functions. You can continue using `asyncFunction(for:)` — it becomes a no-op passthrough that can eventually be removed once you fully migrate:
+
+```swift
+// asyncFunction(for:) is a no-op in Swift export mode — use the Native suffix
+let letters = try await asyncFunction(for: randomLettersGenerator.getRandomLettersNative(throwException: throwException))
+```
+
+### Combine and RxSwift helper functions with async closures
+
+For Combine and RxSwift, use the async closure overloads of `createFuture` and `createObservable` instead of passing a `NativeSuspend` directly:
+
+```swift
+// Before (standard ObjC interop)
+let future = createFuture(for: randomLettersGenerator.getRandomLetters(throwException: throwException))
+
+// After (Swift export compatibility mode)
+let future = createFuture(for: { await self.randomLettersGenerator.getRandomLettersNative(throwException: throwException) })
+```
+
+<Note>
+  You can also use the generated `StateFlow.value` and `SharedFlow.replayCache` value properties in Swift export mode, but remember that the `@ObjCName` limitation applies — access them using the `Native` suffix.
+</Note>

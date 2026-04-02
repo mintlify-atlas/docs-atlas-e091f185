@@ -1,0 +1,91 @@
+---
+title: "Suspend functions"
+description: "How to expose Kotlin suspend functions to Swift using KMP-NativeCoroutines."
+---
+
+Kotlin suspend functions are compiled to ObjC as completion-handler callbacks, which means Swift can call them but cannot cancel them. KMP-NativeCoroutines generates a native wrapper around each annotated suspend function that carries full cancellation support.
+
+## Annotating a suspend function
+
+Add `@NativeCoroutines` to any `suspend` function you want to expose to Swift:
+
+```kotlin
+import com.rickclephas.kmp.nativecoroutines.NativeCoroutines
+
+class RandomLettersGenerator {
+    @NativeCoroutines
+    suspend fun getRandomLetters(): String {
+        // Code to generate some random letters
+    }
+}
+```
+
+The plugin generates a regular (non-suspend) function that wraps the suspend call inside `nativeSuspend { }`:
+
+```kotlin
+import com.rickclephas.kmp.nativecoroutines.nativeSuspend
+import kotlin.native.ObjCName
+
+@ObjCName(name = "getRandomLetters")
+fun RandomLettersGenerator.getRandomLettersNative() =
+    nativeSuspend { getRandomLetters() }
+```
+
+The generated function is named `getRandomLettersNative` in Kotlin but `getRandomLetters` in Swift, because `@ObjCName` restores the original function name for ObjC/Swift callers. Swift code never sees the `Native` suffix.
+
+## The `nativeSuspend` function
+
+`nativeSuspend` is the runtime function that wraps a suspend lambda and returns a `NativeSuspend` value. Swift wrapper functions — `asyncFunction(for:)`, `createFuture(for:)`, and `createSingle(for:)` — accept this type and handle execution and cancellation on the Swift side.
+
+You can call `nativeSuspend` directly if you need to wrap a suspend call without the annotation:
+
+```kotlin
+import com.rickclephas.kmp.nativecoroutines.nativeSuspend
+
+val nativeCall = nativeSuspend { myClass.doSomething() }
+```
+
+## Suspend functions that return a Flow
+
+A suspend function can return a `Flow`. In that case you annotate it with `@NativeCoroutines` and the plugin generates a native wrapper just like for a regular suspend function:
+
+```kotlin
+import com.rickclephas.kmp.nativecoroutines.NativeCoroutines
+
+class RandomLettersGenerator {
+    @NativeCoroutines
+    suspend fun getRandomLettersFlow(): Flow<String> {
+        // ...
+    }
+}
+```
+
+On the Swift side, pass the result of the native wrapper to either a flow function or a suspend function depending on your Swift implementation. The Combine and RxSwift implementations provide `createPublisher(for:)` and `createObservable(for:)` which accept both regular `NativeFlow` values and suspend functions that return a flow:
+
+```swift
+let publisher = createPublisher(for: randomLettersGenerator.getRandomLettersFlow())
+```
+
+## Using `@ObjCName` to preserve the original name
+
+The generated wrapper carries `@ObjCName(name = "getRandomLetters")`, which instructs the Kotlin ObjC export to use the original function name rather than the generated name with the suffix. This means your Swift call sites read the same as your Kotlin source, with no `Native` suffix visible.
+
+Make sure you have opted in to the experimental annotation in your Gradle configuration:
+
+```kotlin
+kotlin.sourceSets.all {
+    languageSettings.optIn("kotlin.experimental.ExperimentalObjCName")
+}
+```
+
+<Note>
+  The `@ObjCName` annotation is required for the name restoration to work. Without the opt-in, the Kotlin compiler will produce a warning.
+</Note>
+
+## Calling from Swift
+
+Once annotated, you can consume the suspend function from Swift using any of the three implementations. See the Swift usage guides for details:
+
+- [Swift Concurrency](/swift/swift-concurrency) — use `asyncFunction(for:)` or `asyncResult(for:)`
+- [Combine](/swift/combine) — use `createFuture(for:)`
+- [RxSwift](/swift/rxswift) — use `createSingle(for:)`

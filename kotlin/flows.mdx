@@ -1,0 +1,135 @@
+---
+title: "Flows"
+description: "How to expose Kotlin Flows — including StateFlow and SharedFlow — to Swift using KMP-NativeCoroutines."
+---
+
+KMP-NativeCoroutines generates native wrappers for `Flow` properties and functions so they can be consumed from Swift with proper cancellation and generic type information. The exact code generated depends on the Flow type.
+
+## Annotating a Flow property
+
+Add `@NativeCoroutines` to any property whose type is `Flow`, `StateFlow`, or `SharedFlow`:
+
+```kotlin
+import com.rickclephas.kmp.nativecoroutines.NativeCoroutines
+
+class Clock {
+    @NativeCoroutines
+    val time: StateFlow<Long>
+}
+```
+
+The plugin generates a native flow property using `asNativeFlow()`, plus additional properties whose shape depends on whether the flow is a `StateFlow` or `SharedFlow`.
+
+## StateFlow
+
+When the annotated property is a `StateFlow`, the plugin generates three things:
+
+1. A native flow property (the primary stream wrapper)
+2. A `.value` shortcut property for reading the current state without subscribing
+3. An `@ObjCName` that gives the native property the same name as the original
+
+```kotlin
+import com.rickclephas.kmp.nativecoroutines.asNativeFlow
+import kotlin.native.ObjCName
+
+@ObjCName(name = "time")
+val Clock.timeNative
+    get() = time.asNativeFlow()
+
+val Clock.timeValue
+    get() = time.value
+```
+
+The `timeNative` property is the one you pass to Swift wrapper functions like `asyncSequence(for:)` or `createPublisher(for:)`. The `timeValue` property gives Swift access to the current value synchronously without starting a collection.
+
+<Note>
+  The `@ObjCName(name = "time")` annotation causes Swift to see `timeNative` under the original name `time`. The suffix (`Native` by default) only appears in Kotlin — Swift callers use the original name.
+</Note>
+
+## SharedFlow
+
+When the annotated property is a `SharedFlow`, the plugin generates a native flow property and a `.replayCache` property instead of a value property:
+
+```kotlin
+import com.rickclephas.kmp.nativecoroutines.asNativeFlow
+import kotlin.native.ObjCName
+
+@ObjCName(name = "events")
+val MyClass.eventsNative
+    get() = events.asNativeFlow()
+
+val MyClass.eventsReplayCache
+    get() = events.replayCache
+```
+
+The replay cache property exposes `SharedFlow.replayCache` — the list of values buffered for new subscribers.
+
+## Using `@NativeCoroutinesState` for StateFlow
+
+When a `StateFlow` represents observable state (typical in view models), use `@NativeCoroutinesState` instead of `@NativeCoroutines`. This flips the naming priority: the value property becomes the primary Swift-visible member and the flow becomes the companion.
+
+```kotlin
+import com.rickclephas.kmp.nativecoroutines.NativeCoroutinesState
+
+class ClockViewModel {
+    @NativeCoroutinesState
+    val time: StateFlow<Long>
+}
+```
+
+Generated code:
+
+```kotlin
+import com.rickclephas.kmp.nativecoroutines.asNativeFlow
+import kotlin.native.ObjCName
+
+@ObjCName(name = "time")
+val ClockViewModel.timeValue
+    get() = time.value
+
+val ClockViewModel.timeFlow
+    get() = time.asNativeFlow()
+```
+
+Here `timeValue` carries the `@ObjCName` and is what Swift sees as `time`. The `timeFlow` companion is there when you need to subscribe to changes rather than read the current value.
+
+## Annotating a function that returns a Flow
+
+`@NativeCoroutines` also works on functions whose return type is a `Flow`:
+
+```kotlin
+import com.rickclephas.kmp.nativecoroutines.NativeCoroutines
+
+class RandomLettersGenerator {
+    @NativeCoroutines
+    fun getRandomLettersFlow(): Flow<String> {
+        // ...
+    }
+}
+```
+
+The plugin generates a native wrapper function that calls `asNativeFlow()` on the returned flow. You can pass the result directly to `asyncSequence(for:)`, `createPublisher(for:)`, or `createObservable(for:)` in Swift.
+
+## The `asNativeFlow()` extension
+
+`asNativeFlow()` is the core extension function that converts any Kotlin `Flow` into the `NativeFlow` type that Swift wrapper functions expect. You can call it directly if you need to wrap a flow without using the annotation:
+
+```kotlin
+import com.rickclephas.kmp.nativecoroutines.asNativeFlow
+
+val nativeTime = clock.time.asNativeFlow()
+```
+
+This is the same call the plugin generates inside every `@NativeCoroutines`-annotated Flow property and function.
+
+## Generated property summary
+
+| Flow type | Annotation | Generated properties |
+|---|---|---|
+| `StateFlow` | `@NativeCoroutines` | `{name}Native` (flow), `{name}Value` (current value) |
+| `SharedFlow` | `@NativeCoroutines` | `{name}Native` (flow), `{name}ReplayCache` (replay buffer) |
+| `StateFlow` | `@NativeCoroutinesState` | `{name}Value` (current value, primary), `{name}Flow` (stream) |
+
+<Tip>
+  You can change all generated suffixes — `Native`, `Value`, `ReplayCache`, `Flow` — in the Gradle plugin configuration. See [Customization](/kotlin/customization) for details.
+</Tip>

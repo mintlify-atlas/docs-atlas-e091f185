@@ -1,0 +1,120 @@
+{
+  "projectType": "sdk-library",
+  "projectName": "KMP-NativeCoroutines",
+  "projectDescription": "A Kotlin Multiplatform library that enables Kotlin Coroutines (suspend functions and Flows) to be used natively from Swift with full cancellation support, via Swift Concurrency, Combine, and RxSwift.",
+  "theme": "luma",
+  "primaryColor": "#f32057",
+  "lightColor": "#040404",
+  "darkColor": "#ffffff",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Kotlin Setup",
+            "pages": [
+              "kotlin/annotations",
+              "kotlin/flows",
+              "kotlin/suspend-functions",
+              "kotlin/customization"
+            ]
+          },
+          {
+            "group": "Swift Usage",
+            "pages": [
+              "swift/swift-concurrency",
+              "swift/combine",
+              "swift/rxswift"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "advanced/coroutine-scope",
+              "advanced/interface-limitations",
+              "advanced/swift-export",
+              "advanced/ide-plugin"
+            ]
+          },
+          {
+            "group": "Migration",
+            "pages": [
+              "migration/migrating-to-v1",
+              "migration/compatibility"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Kotlin Annotations",
+            "pages": [
+              "api/annotations/native-coroutines",
+              "api/annotations/native-coroutines-state",
+              "api/annotations/native-coroutines-ignore",
+              "api/annotations/native-coroutines-refined"
+            ]
+          },
+          {
+            "group": "Swift APIs",
+            "pages": [
+              "api/swift/async",
+              "api/swift/combine",
+              "api/swift/rxswift"
+            ]
+          },
+          {
+            "group": "Gradle Plugin",
+            "pages": [
+              "api/gradle/plugin-configuration"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Full cancellation support for Kotlin suspend functions called from Swift",
+    "Generic Flow type preservation across the Kotlin/Swift boundary",
+    "Swift Concurrency (async/await) integration via KMPNativeCoroutinesAsync",
+    "Combine framework integration via KMPNativeCoroutinesRxSwift",
+    "RxSwift integration via KMPNativeCoroutinesRxSwift",
+    "KSP-based code generation with @NativeCoroutines annotations",
+    "Gradle plugin for automatic native wrapper generation",
+    "IDE plugin for IntelliJ/Android Studio with annotation validation",
+    "Swift export compatibility mode",
+    "Custom CoroutineScope support via @NativeCoroutineScope"
+  ],
+  "publicApiSurface": [
+    "@NativeCoroutines annotation",
+    "@NativeCoroutinesState annotation",
+    "@NativeCoroutinesIgnore annotation",
+    "@NativeCoroutinesRefined annotation",
+    "@NativeCoroutinesRefinedState annotation",
+    "@NativeCoroutineScope annotation",
+    "asyncFunction(for:) — Swift Concurrency async wrapper",
+    "asyncResult(for:) — Swift Concurrency result wrapper",
+    "asyncError(for:) — Swift Concurrency error wrapper",
+    "asyncSequence(for:) — AsyncSequence wrapper for Flows",
+    "createPublisher(for:) — Combine AnyPublisher for Flows",
+    "createFuture(for:) — Combine Future for suspend functions",
+    "createObservable(for:) — RxSwift Observable for Flows",
+    "createSingle(for:) — RxSwift Single for suspend functions",
+    "NativeFlow type alias",
+    "NativeSuspend type alias",
+    "NativeCancellable type alias",
+    "KmpNativeCoroutinesExtension (Gradle DSL)",
+    "ExposedSeverity enum (NONE, WARNING, ERROR)"
+  ]
+}

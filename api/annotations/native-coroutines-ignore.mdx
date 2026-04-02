@@ -1,0 +1,57 @@
+---
+title: '@NativeCoroutinesIgnore'
+description: 'Excludes a property or function from KMP-NativeCoroutines processing and suppresses exposed-coroutines warnings.'
+---
+
+## Overview
+
+`@NativeCoroutinesIgnore` tells the KMP-NativeCoroutines compiler plugin to skip the annotated declaration entirely. No native wrapper is generated, and any "exposed coroutines" warning that would normally appear for the declaration is suppressed.
+
+```kotlin
+import com.rickclephas.kmp.nativecoroutines.NativeCoroutinesIgnore
+```
+
+## Declaration
+
+```kotlin
+@Target(AnnotationTarget.PROPERTY, AnnotationTarget.FUNCTION)
+@Retention(AnnotationRetention.SOURCE)
+@MustBeDocumented
+public annotation class NativeCoroutinesIgnore
+```
+
+<Note>
+  This annotation uses `SOURCE` retention, so it is not present in compiled binaries.
+</Note>
+
+## Targets
+
+<ParamField path="AnnotationTarget.PROPERTY" type="target">
+  Any `Flow`-returning property you intentionally want to expose to ObjC/Swift without a generated wrapper.
+</ParamField>
+
+<ParamField path="AnnotationTarget.FUNCTION" type="target">
+  Any `suspend` function or `Flow`-returning function you intentionally want to expose without a generated wrapper.
+</ParamField>
+
+## Usage
+
+Apply `@NativeCoroutinesIgnore` to declarations you are deliberately exposing to ObjC/Swift without using the KMP-NativeCoroutines wrapper layer.
+
+```kotlin
+import com.rickclephas.kmp.nativecoroutines.NativeCoroutinesIgnore
+
+@NativeCoroutinesIgnore
+val ignoredFlowProperty: Flow<Int>
+
+@NativeCoroutinesIgnore
+suspend fun ignoredSuspendFunction() { }
+```
+
+Without this annotation, the compiler plugin (and the IDE plugin) will produce a warning on any `Flow` property or `suspend` function that is exposed to ObjC/Swift without a KMP-NativeCoroutines annotation. `@NativeCoroutinesIgnore` opts that specific declaration out of those checks.
+
+## When to use it
+
+- You are manually wrapping a declaration and do not want the plugin to generate a conflicting wrapper.
+- You have intentionally chosen not to expose a declaration through KMP-NativeCoroutines but still want it available in Swift for another reason.
+- You want to suppress the warning on a temporary basis while migrating.

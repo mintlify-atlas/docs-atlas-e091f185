@@ -1,0 +1,125 @@
+---
+title: '@NativeCoroutinesRefined'
+description: 'Marks the generated native wrapper with @ShouldRefineInSwift so you can replace it with a cleaner Swift API.'
+---
+
+## Overview
+
+`@NativeCoroutinesRefined` and `@NativeCoroutinesRefinedState` work exactly like [`@NativeCoroutines`](/api/annotations/native-coroutines) and [`@NativeCoroutinesState`](/api/annotations/native-coroutines-state) respectively, but they additionally add the Kotlin [`@ShouldRefineInSwift`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.native/-should-refine-in-swift/) annotation to every generated property and function. This causes Xcode to hide the generated wrappers from Swift autocompletion (they appear prefixed with `__`), letting you replace them with a handwritten Swift extension that provides a cleaner API.
+
+<Warning>
+  Both annotations require a module-wide opt-in to `kotlin.experimental.ExperimentalObjCRefinement`.
+</Warning>
+
+---
+
+## `@NativeCoroutinesRefined`
+
+```kotlin
+import com.rickclephas.kmp.nativecoroutines.NativeCoroutinesRefined
+```
+
+### Declaration
+
+```kotlin
+@Target(AnnotationTarget.PROPERTY, AnnotationTarget.FUNCTION)
+@Retention(AnnotationRetention.BINARY)
+@MustBeDocumented
+@OptIn(ExperimentalObjCRefinement::class)
+@HidesFromObjC
+public annotation class NativeCoroutinesRefined
+```
+
+### Targets
+
+<ParamField path="AnnotationTarget.PROPERTY" type="target">
+  Any `Flow`-returning property (including `StateFlow` and `SharedFlow`).
+</ParamField>
+
+<ParamField path="AnnotationTarget.FUNCTION" type="target">
+  Any `suspend` function or `Flow`-returning function.
+</ParamField>
+
+### Usage
+
+Annotate your Kotlin declaration with `@NativeCoroutinesRefined`, then write a Swift extension that calls the hidden `__`-prefixed wrapper and exposes a fully typed Swift API.
+
+```kotlin
+import com.rickclephas.kmp.nativecoroutines.NativeCoroutinesRefined
+
+class Clock {
+    @NativeCoroutinesRefined
+    val time: StateFlow<Long>
+}
+```
+
+The plugin generates `__time` (hidden from Swift completions). Write a Swift extension to surface it:
+
+```swift
+import KMPNativeCoroutinesCombine
+
+extension Clock {
+    var time: AnyPublisher<KotlinLong, Error> {
+        createPublisher(for: __time)
+    }
+}
+```
+
+---
+
+## `@NativeCoroutinesRefinedState`
+
+```kotlin
+import com.rickclephas.kmp.nativecoroutines.NativeCoroutinesRefinedState
+```
+
+### Declaration
+
+```kotlin
+@Target(AnnotationTarget.PROPERTY)
+@Retention(AnnotationRetention.BINARY)
+@MustBeDocumented
+@OptIn(ExperimentalObjCRefinement::class)
+@HidesFromObjC
+public annotation class NativeCoroutinesRefinedState
+```
+
+### Targets
+
+<ParamField path="AnnotationTarget.PROPERTY" type="target">
+  A `StateFlow` property. Equivalent to `@NativeCoroutinesState` with `@ShouldRefineInSwift` applied to the generated properties.
+</ParamField>
+
+### Usage
+
+Use `@NativeCoroutinesRefinedState` when you want the same state-first generation behaviour as `@NativeCoroutinesState` but also intend to provide a custom Swift refinement.
+
+```kotlin
+import com.rickclephas.kmp.nativecoroutines.NativeCoroutinesRefinedState
+
+class Clock {
+    @NativeCoroutinesRefinedState
+    val time: StateFlow<Long>
+}
+```
+
+---
+
+## Opt-in requirement
+
+Add the following opt-in to your Gradle build to enable `@ShouldRefineInSwift` support across your module:
+
+```kotlin
+kotlin.sourceSets.all {
+    languageSettings.optIn("kotlin.experimental.ExperimentalObjCRefinement")
+}
+```
+
+## Comparison
+
+| Annotation | Base behaviour | Adds `@ShouldRefineInSwift` |
+|---|---|---|
+| `@NativeCoroutines` | Flow / suspend wrapper | No |
+| `@NativeCoroutinesRefined` | Flow / suspend wrapper | Yes |
+| `@NativeCoroutinesState` | State-first wrapper | No |
+| `@NativeCoroutinesRefinedState` | State-first wrapper | Yes |

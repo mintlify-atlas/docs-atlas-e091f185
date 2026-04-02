@@ -1,0 +1,80 @@
+---
+title: "Compatibility"
+description: "Kotlin version compatibility table, Swift implementation platform requirements, and version matching rules for KMP-NativeCoroutines."
+---
+
+## Version matching
+
+Always use the same version number for the Kotlin plugin and the Swift package. Mixing versions — even patch versions — is not supported and will cause build or runtime failures.
+
+<Note>
+  The Swift package version must not include the Kotlin version suffix (e.g. `-new-mm` or `-kotlin-1.6.0`). Only the numeric version is used for SPM and CocoaPods.
+</Note>
+
+## Kotlin version compatibility
+
+Each KMP-NativeCoroutines release targets a specific Kotlin and Coroutines version. Use the table below to find the right release for your project.
+
+| Version        | Version suffix | Kotlin  | Coroutines |
+| -------------- | -------------- | ------- | ---------- |
+| **_latest_**   | _no suffix_    | 2.3.20  | 1.10.1     |
+| 1.0.1          | _no suffix_    | 2.3.10  | 1.10.1     |
+| 1.0.0          | _no suffix_    | 2.3.0   | 1.10.1     |
+| 1.0.0-ALPHA-48 | _no suffix_    | 2.2.21  | 1.10.1     |
+| 1.0.0-ALPHA-46 | _no suffix_    | 2.2.10  | 1.10.1     |
+| 1.0.0-ALPHA-45 | _no suffix_    | 2.2.0   | 1.10.1     |
+| 1.0.0-ALPHA-44 | _no suffix_    | 2.1.21  | 1.10.1     |
+| 1.0.0-ALPHA-41 | _no suffix_    | 2.1.10  | 1.10.1     |
+| 1.0.0-ALPHA-38 | _no suffix_    | 2.1.0   | 1.9.0      |
+| 1.0.0-ALPHA-37 | _no suffix_    | 2.0.21  | 1.9.0      |
+| 1.0.0-ALPHA-34 | _no suffix_    | 2.0.10  | 1.8.1      |
+| 1.0.0-ALPHA-33 | _no suffix_    | 2.0.0   | 1.8.1      |
+
+### How to pick the right version
+
+1. Check which Kotlin version your project uses.
+2. Find the row in the table above where the **Kotlin** column matches.
+3. Use the corresponding **Version** value for both the Gradle plugin and the Swift package.
+
+<Note>
+  All versions from 1.0.0-ALPHA-33 onwards use **no suffix** — earlier pre-release versions used suffixes like `-new-mm` or `-kotlin-1.6.0` to encode the Kotlin version. You no longer need to append anything to the version number.
+</Note>
+
+## Swift implementation compatibility
+
+Choose the Swift implementation that matches your minimum deployment targets. All implementations are available via Swift Package Manager and CocoaPods.
+
+| Implementation | Swift | iOS  | macOS | tvOS | watchOS |
+| -------------- | ----- | ---- | ----- | ---- | ------- |
+| Async          | 5.5   | 13.0 | 10.15 | 13.0 | 6.0     |
+| Combine        | 5.0   | 13.0 | 10.15 | 13.0 | 6.0     |
+| RxSwift        | 5.0   | 9.0  | 10.9  | 9.0  | 3.0     |
+
+- **Async** — Uses Swift Concurrency (`async`/`await` and `AsyncSequence`). Requires Swift 5.5 and iOS 13 or later.
+- **Combine** — Uses Apple's Combine framework. Supports the same deployment targets as Async.
+- **RxSwift** — Widest platform coverage. Supports as far back as iOS 9, macOS 10.9, tvOS 9, and watchOS 3.
+
+## SPM-specific versions
+
+If your app only needs a single implementation you can use the implementation-specific SPM versions to reduce the dependency footprint. Add the appropriate suffix to your version tag:
+
+| Suffix          | Implementation |
+| --------------- | -------------- |
+| `-spm-async`    | Async          |
+| `-spm-combine`  | Combine        |
+| `-spm-rxswift`  | RxSwift        |
+
+<Note>
+  SPM-specific suffixed versions are only available for Swift Package Manager. CocoaPods users should reference individual pod names (`KMPNativeCoroutinesAsync`, `KMPNativeCoroutinesCombine`, `KMPNativeCoroutinesRxSwift`) without a suffix.
+</Note>
+
+For example, to depend on only the Async implementation:
+
+```swift
+dependencies: [
+    .package(
+        url: "https://github.com/rickclephas/KMP-NativeCoroutines.git",
+        exact: "1.0.2-spm-async"
+    )
+]
+```

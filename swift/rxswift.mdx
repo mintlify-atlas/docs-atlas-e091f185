@@ -1,0 +1,93 @@
+---
+title: "RxSwift"
+description: "Use Kotlin Flows and suspend functions as RxSwift Observables and Singles."
+---
+
+Add `import KMPNativeCoroutinesRxSwift` to your Swift file to access the RxSwift wrappers. This package requires Swift 5.0+ and has the broadest platform support: iOS 9.0+, macOS 10.9+, tvOS 9.0+, and watchOS 3.0+.
+
+```swift
+import KMPNativeCoroutinesRxSwift
+```
+
+<Note>
+All `Observable`s and `Single`s created by this package are **deferred**. Each new subscription triggers a fresh collection of the `Flow` or a fresh execution of the suspend function. Multiple subscribers each get their own independent upstream.
+</Note>
+
+## Flows
+
+### createObservable(for:)
+
+Use `createObservable(for:)` to create a deferred `Observable` from a `NativeFlow`. Each subscription starts a new collection of the flow.
+
+```swift
+// Create an Observable for your flow
+let observable = createObservable(for: clock.time)
+
+// Use this observable as you would any other
+let disposable = observable.subscribe(onNext: { value in
+    print("Received value: \(value)")
+}, onError: { error in
+    print("Received error: \(error)")
+}, onCompleted: {
+    print("Observable completed")
+}, onDisposed: {
+    print("Observable disposed")
+})
+
+// Cancel the flow collection by disposing the subscription
+disposable.dispose()
+```
+
+You can also pass `createObservable(for:)` a suspend function that returns a `Flow`. The library first awaits the suspend function, then collects the returned flow as an `Observable`.
+
+```swift
+let observable = createObservable(for: randomLettersGenerator.getRandomLettersFlow())
+```
+
+## Suspend functions
+
+### createSingle(for:)
+
+Use `createSingle(for:)` to create a deferred `Single` from a `NativeSuspend`. The `Single` either emits one value and completes, or fails with an error.
+
+```swift
+// Create a Single for the suspend function
+let single = createSingle(for: randomLettersGenerator.getRandomLetters())
+
+// Use this single as you would any other
+let disposable = single.subscribe(onSuccess: { value in
+    print("Received value: \(value)")
+}, onFailure: { error in
+    print("Received error: \(error)")
+}, onDisposed: {
+    print("Single disposed")
+})
+
+// Cancel the suspend function by disposing the subscription
+disposable.dispose()
+```
+
+## Cancellation
+
+Call `.dispose()` on the `Disposable` returned by `.subscribe` to cancel the underlying Kotlin coroutine or flow collection.
+
+```swift
+var disposeBag = DisposeBag()
+
+func startObserving() {
+    createObservable(for: clock.time)
+        .subscribe(onNext: { value in
+            print("Received value: \(value)")
+        }, onError: { error in
+            print("Received error: \(error)")
+        }, onCompleted: {
+            print("Observable completed")
+        })
+        .disposed(by: disposeBag)
+}
+
+func stopObserving() {
+    // Disposing the DisposeBag cancels all subscriptions
+    disposeBag = DisposeBag()
+}
+```

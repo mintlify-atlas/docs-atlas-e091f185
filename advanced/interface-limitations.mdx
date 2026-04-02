@@ -1,0 +1,41 @@
+---
+title: "Interface limitations"
+description: "Understand the ObjC protocol restriction on extension functions and how to work around it in Swift."
+---
+
+KMP-NativeCoroutines generates native wrappers as Kotlin extension functions and extension properties on the class that declares the annotated coroutine. This works without any extra steps when the declaring type is a `class` or `object`. However, when the declaring type is an `interface`, a platform-level restriction applies.
+
+## The limitation
+
+Kotlin `interface` types are exposed to ObjC/Swift as protocols. The Kotlin/Native interop layer does [not support](https://kotlinlang.org/docs/native-objc-interop.html#extensions-and-category-members) calling extension functions or properties on ObjC protocols directly from Swift.
+
+As a result, if `RandomLettersGenerator` is declared as an `interface`, the generated extension function:
+
+```kotlin
+fun RandomLettersGenerator.getRandomLettersNative() =
+    nativeSuspend { getRandomLetters() }
+```
+
+cannot be called directly on an instance of `RandomLettersGenerator` from Swift. Attempting to do so will produce a compile error.
+
+## The Swift workaround
+
+You can work around this limitation with a Swift `extension` on the protocol. Inside the extension, call the generated Kotlin extension function explicitly by passing `self` as the receiver argument:
+
+```swift
+import KMPNativeCoroutinesCore
+
+extension RandomLettersGenerator {
+    func getRandomLetters() -> NativeSuspend<String, Error, KotlinUnit> {
+        RandomLettersGeneratorNativeKt.getRandomLetters(self)
+    }
+}
+```
+
+A few things to note:
+
+- **Import `KMPNativeCoroutinesCore`** to bring the `NativeSuspend` type alias into scope.
+- The return type must match the generated function's signature exactly. For a suspend function returning `String`, the return type is `NativeSuspend<String, Error, KotlinUnit>`.
+- `RandomLettersGeneratorNativeKt` is the generated Kotlin file-level object; the generated extension function is accessed as a static method on it, with the receiver passed as the first argument.
+
+Once this Swift extension is in place, you can call `getRandomLetters()` on any value of type `RandomLettersGenerator` exactly as you would on a class-based type, and pass the result to `asyncFunction(for:)`, `createFuture(for:)`, or any other Swift wrapper.
